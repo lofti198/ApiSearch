@@ -1,20 +1,20 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
+﻿using Microsoft.Extensions.Configuration;
 using ApiSearchConsole.Services;
 using ApiSearchConsole.Services.AI;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
+// Add services
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<UrlScraperService>();
-builder.Services.AddSingleton<CacheService>(sp => new CacheService("Cache"));
-builder.Services.AddSingleton<OpenAICompletionService>(); // Use your existing OpenAICompletionService
+builder.Services.AddSingleton(sp => new CacheService("Cache"));
+builder.Services.AddSingleton<OpenAICompletionService>();
 builder.Services.AddSingleton<LoggerService>();
 
 var app = builder.Build();
 
+// Load configuration
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -22,40 +22,85 @@ var configuration = new ConfigurationBuilder()
 
 string urlToParse = configuration["urlToParse"];
 int depthToParse = int.Parse(configuration["depthToParse"]);
+int maxUrlsToProcess = configuration.GetValue<int>("maxUrlsToProcess", 0); // 0 = unlimited
+int maxRelevantResults = configuration.GetValue<int>("maxRelevantResults", 0); // 0 = unlimited
+
+var prompt = configuration["prompt"];
+var instruction = configuration["instruction"];
+var jsonSchema = new { summary = "" };
 
 var scraperService = app.Services.GetRequiredService<UrlScraperService>();
 var cacheService = app.Services.GetRequiredService<CacheService>();
 var openAiService = app.Services.GetRequiredService<OpenAICompletionService>();
 var logger = app.Services.GetRequiredService<LoggerService>();
 
-logger.Log("Starting URL scraping...");
-var urls = await scraperService.ScrapeAsync(urlToParse, depthToParse);
+var processedUrls = new HashSet<string>();
+var relevantResults = new List<string>();
+var queue = new Queue<(string Url, int Depth)>();
 
-logger.Log("Caching scraped pages...");
-foreach (var url in urls)
+queue.Enqueue((urlToParse, 0));
+
+logger.Log("🚀 Starting smart recursive scraping...");
+
+while (queue.Count > 0 &&
+      (maxUrlsToProcess == 0 || processedUrls.Count < maxUrlsToProcess) &&
+      (maxRelevantResults == 0 || relevantResults.Count < maxRelevantResults))
 {
-    if (!cacheService.IsCached(url))
+    var (url, currentDepth) = queue.Dequeue();
+    if (processedUrls.Contains(url) || currentDepth > depthToParse)
+        continue;
+
+    logger.Log($"🌐 Processing: {url}");
+    processedUrls.Add(url);
+
+    string content;
+    if (cacheService.IsCached(url))
+    {
+        content = cacheService.LoadFromCache(url);
+    }
+    else
     {
         try
         {
-            var content = await new HttpClient().GetStringAsync(url);
+            content = await new HttpClient().GetStringAsync(url);
             cacheService.SaveToCache(url, content);
         }
         catch (Exception ex)
         {
-            logger.Log($"Failed to cache {url}: {ex.Message}");
+            logger.Log($"❌ Failed to load {url}: {ex.Message}");
+            continue;
+        }
+    }
+
+    try
+    {
+        var result = await openAiService.GetChatCompletionsAsync(content, instruction, jsonSchema);
+        if (!string.IsNullOrWhiteSpace(result))
+        {
+            logger.Log($"✅ Relevant content found at: {url}");
+            relevantResults.Add($"URL: {url}\n{result}");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.Log($"⚠️ OpenAI failed on {url}: {ex.Message}");
+    }
+
+    if (currentDepth < depthToParse)
+    {
+        var links = scraperService.ExtractLinks(content);
+        foreach (var link in links)
+        {
+            try
+            {
+                var absolute = new Uri(new Uri(url), link).ToString();
+                if (!processedUrls.Contains(absolute))
+                    queue.Enqueue((absolute, currentDepth + 1));
+            }
+            catch { /* Skip malformed links */ }
         }
     }
 }
 
-logger.Log("Sending data to OpenAI...");
-var prompt = "Summarize the following API documentation:\n" + string.Join("\n", urls);
-var instruction = "You are an assistant that summarizes API documentation.";
-var jsonSchema = new { summary = "" }; // Define the expected JSON schema for the response
-
-var openAiResponse = await openAiService.GetChatCompletionsAsync(prompt, instruction, jsonSchema);
-
-logger.Log("Saving OpenAI response...");
-File.WriteAllText("OpenAiResponse.txt", openAiResponse);
-
-logger.Log("Process completed.");
+File.WriteAllText("RelevantResults.txt", string.Join("\n\n---\n\n", relevantResults));
+logger.Log($"🏁 Process finished. {relevantResults.Count} relevant results saved to RelevantResults.txt");
