@@ -26,8 +26,9 @@ obj/
 # Ignore temporary files
 *.tmp
 *.temp
+*.vsidx
 ~$*
 
 # Ignore publish outputs
 publish/
-/.vs/ApiSearchConsole/FileContentIndex/ae134e78-369d-49f3-8959-2a00f6119b9d.vsidx
+/.vs/

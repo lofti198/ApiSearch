@@ -3,6 +3,7 @@ using ApiSearchConsole.Services;
 using ApiSearchConsole.Services.AI;
 using Microsoft.Extensions.DependencyInjection;
 
+//NOTE: maybe Webapplication is not the best choice for this console app
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
