@@ -14,7 +14,7 @@ namespace ApiSearchConsole.Services.AI{
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
 
-        public async Task<string> GetChatCompletionsAsync(string userMessage, string instruction, object jsonSchema, CancellationToken ct = default)
+        public async Task<string> GetChatCompletionsAsync(string userMessage, string? instruction, object jsonSchema, CancellationToken ct = default)
         {
             if (string.IsNullOrEmpty(userMessage))
             {
@@ -37,27 +37,29 @@ namespace ApiSearchConsole.Services.AI{
                     model = "gpt-4",
                     messages,
                     //TODO: if its null as parameter - do not include it in the request
+#if !DEBUG
                     response_format = new
                     {
                         type = "json_schema",
                         json_schema = jsonSchema
                     }
+#endif
                 };
 
                 request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
 
-                var httpResponse = await _httpClient.SendAsync(request);
+                var httpResponse = await _httpClient.SendAsync(request, ct);
 
                 if (!httpResponse.IsSuccessStatusCode)
                 {
                     throw new Exception($"Error from OpenAI Chat Completions: {httpResponse.ReasonPhrase}");
                 }
 
-                var responseContent = await httpResponse.Content.ReadAsStringAsync();
+                var responseContent = await httpResponse.Content.ReadAsStringAsync(ct);
                 var chatResponseJson = JsonConvert.DeserializeObject<dynamic>(responseContent);
 
                 // Extract JSON response from OpenAI's reply
-                var responseText = chatResponseJson.choices[0].message.content.ToString().Trim();
+                var responseText = chatResponseJson?.choices[0].message.content.ToString().Trim();
 
                 responseText = Regex.Replace(responseText, "^.*?{", "{", RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 responseText = Regex.Replace(responseText, "}.*?$", "}", RegexOptions.IgnoreCase | RegexOptions.Singleline);
