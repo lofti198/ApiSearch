@@ -36,6 +36,7 @@ namespace ApiSearchConsole.Services.AI{
                 {
                     model = "gpt-4",
                     messages,
+                    //TODO: if its null as parameter - do not include it in the request
                     response_format = new
                     {
                         type = "json_schema",

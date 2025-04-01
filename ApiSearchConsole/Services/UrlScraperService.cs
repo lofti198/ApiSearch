@@ -39,7 +39,8 @@ namespace ApiSearchConsole.Services
             return result;
         }
 
-        //TODO: extract just internal links (from the same domain, however including subdomains)    
+        //TODO: extract just internal links (from the same domain, however including subdomains)
+        // subdomain.site.com, another.site.com, site.com
         private IEnumerable<string> ExtractLinks(string html)
         {
             var regex = new Regex(@"href\s*=\s*[""'](?<url>[^""']+)[""']", RegexOptions.IgnoreCase);

@@ -15,7 +15,7 @@ builder.Services.AddSingleton<LoggerService>();
 
 var app = builder.Build();
 
-// Load configuration
+// TODO: get path where the mainmodule exe is located
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -43,6 +43,7 @@ queue.Enqueue((urlToParse, 0));
 
 logger.Log("🚀 Starting smart recursive scraping...");
 
+//TODO: move to separate service
 while (queue.Count > 0 &&
       (maxUrlsToProcess == 0 || processedUrls.Count < maxUrlsToProcess) &&
       (maxRelevantResults == 0 || relevantResults.Count < maxRelevantResults))
