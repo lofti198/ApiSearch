@@ -4,6 +4,7 @@ using ApiSearchConsole.Services.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ApiSearchConsole;
+using Plamar.QueueProcFacilities.Services.Caching;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -13,7 +14,11 @@ builder.Services.AddSingleton(sp => new CacheService("Cache"));
 builder.Services.AddSingleton<OpenAICompletionService>();
 builder.Services.AddSingleton<LoggerService>();
 builder.Services.AddSingleton<UrlProcessingService>(); // Регистрация нового сервиса
-
+builder.Services.AddSingleton<ICachingService<string, string>>(sp =>
+{
+    var cacheService = sp.GetRequiredService<CacheService>();
+    return new FileStringCache("apisearcher","","",true);
+});
 var app = builder.Build();
 
 var environment = app.Services.GetRequiredService<IHostEnvironment>();

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using Plamar.QueueProcFacilities.Services.Caching;
 
 namespace ApiSearchConsole
 {
@@ -14,7 +15,8 @@ namespace ApiSearchConsole
         UrlScraperService scraperService,
         CacheService cacheService,
         OpenAICompletionService openAiService,
-        LoggerService logger)
+        LoggerService logger,
+        ICachingService<string, string> llmCachingService)
     {
         public async Task ProcessUrlsAsync(
             Queue<(string Url, int Depth)> queue,
@@ -66,7 +68,18 @@ namespace ApiSearchConsole
                     //If you make too many requests, you may receive a 429 error )))))
                     Thread.Sleep(openAiIntervalInMilliseconds);
                     
-                    var result = await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
+                    var cachedResult = await llmCachingService.GetCache(instruction + textContent);
+
+                    var result = "";
+                    if(!String.IsNullOrEmpty(cachedResult))result = cachedResult;
+                    else
+                    {
+                        result = await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
+                        if (!string.IsNullOrWhiteSpace(result))
+                            llmCachingService.SaveCache(instruction + textContent, result);
+                    }
+
+                    await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
                     if (!string.IsNullOrWhiteSpace(result))
                     {
                         logger.Log($"✅ Relevant content found at: {url}");
