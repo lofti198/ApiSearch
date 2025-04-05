@@ -44,7 +44,21 @@ namespace ApiSearchConsole.Services
         public IEnumerable<string> ExtractLinks(string html)
         {
             var regex = new Regex(@"href\s*=\s*[""'](?<url>[^""']+)[""']", RegexOptions.IgnoreCase);
-            return regex.Matches(html).Select(m => m.Groups["url"].Value).Where(link => !string.IsNullOrEmpty(link));
+            var disallowedExtensions = new[]
+            {
+        ".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico",
+        ".woff", ".woff2", ".ttf", ".eot", ".otf", ".pdf", ".zip",
+        ".rar", ".exe", ".mp3", ".mp4", ".webm", ".avi", ".mov",".webmanifest"
+    };
+
+            return regex.Matches(html)
+                .Select(m => m.Groups["url"].Value)
+                .Where(link =>
+                    !string.IsNullOrEmpty(link) &&
+                    !disallowedExtensions.Any(ext => link.Contains('?') ?
+                        link.Substring(0, link.IndexOf('?')).EndsWith(ext, StringComparison.OrdinalIgnoreCase) :
+                        link.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
         }
+
     }
 }

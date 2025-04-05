@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using System.Text.RegularExpressions;
 
 namespace ApiSearchConsole
 {
@@ -58,8 +59,8 @@ namespace ApiSearchConsole
 
                 var htmlDoc = new HtmlDocument();
                 htmlDoc.LoadHtml(content);
-                var textContent = htmlDoc.DocumentNode.InnerText;
-
+                var textContent = Regex.Replace(htmlDoc.DocumentNode.InnerText, @"\s+", " ").Trim();
+           
                 try
                 {
                     //If you make too many requests, you may receive a 429 error )))))
