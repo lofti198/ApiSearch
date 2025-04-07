@@ -1,33 +1,41 @@
-﻿namespace ApiSearchConsole.Utils
+﻿public static class JsonSchemeGenerator
 {
-    public static class JsonSchemeGenerator
+    public static object GetJsonSchema()
     {
-        public static object GetJsonScheme()
+        return new
         {
-            return new
+            name = "AnswerExtractionSchema",
+            schema = new
             {
-                type = "array",
-                items = new
+                type = "object",
+                properties = new
                 {
-                    type = "object",
-                    properties = new
+                    answers = new
                     {
-                        originalQuestion = new
+                        type = "array",
+                        description = "List of question-answer pairs relevant to the prompt.",
+                        items = new
                         {
-                            type = "string",
-                            description = "The part of the original prompt to which this answer refers."
-                        },
-                        answer = new
-                        {
-                            type = "string",
-                            description = "The answer extracted from the text."
+                            type = "object",
+                            properties = new
+                            {
+                                originalQuestion = new
+                                {
+                                    type = "string",
+                                    description = "The part of the original prompt to which this answer refers."
+                                },
+                                answer = new
+                                {
+                                    type = "string",
+                                    description = "The answer extracted from the text."
+                                }
+                            },
+                            required = new[] { "originalQuestion", "answer" }
                         }
-                    },
-                    required = new[] { "originalQuestion", "answer" }
-                }
-            };
-        }
-
+                    }
+                },
+                required = new[] { "answers" }
+            }
+        };
     }
-
 }

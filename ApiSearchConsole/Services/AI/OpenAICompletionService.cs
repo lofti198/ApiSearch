@@ -69,12 +69,12 @@ namespace ApiSearchConsole.Services.AI
 
                 var httpResponse = await _httpClient.SendAsync(request, ct);
 
+                var responseContent = await httpResponse.Content.ReadAsStringAsync(ct);
+                
                 if (!httpResponse.IsSuccessStatusCode)
                 {
                     throw new Exception($"Error from OpenAI Chat Completions: {httpResponse.ReasonPhrase}");
                 }
-
-                var responseContent = await httpResponse.Content.ReadAsStringAsync(ct);
                 var chatResponseJson = JsonConvert.DeserializeObject<dynamic>(responseContent);
 
                 // Extract JSON response from OpenAI's reply

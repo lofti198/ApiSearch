@@ -1,10 +1,9 @@
-﻿using ApiSearchConsole.Services.AI;
-using ApiSearchConsole.Services;
+﻿using ApiSearchConsole.Services;
+using ApiSearchConsole.Services.AI;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 using Plamar.QueueProcFacilities.Services.Caching;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
-using ApiSearchConsole.Utils;
 
 namespace ApiSearchConsole
 {
@@ -26,7 +25,7 @@ namespace ApiSearchConsole
             object? _, // previous jsonSchema param not needed
             int openAiIntervalInMilliseconds)
         {
-            var jsonSchema = JsonSchemeGenerator.GetJsonScheme(); // 👈 Injected here
+            var jsonSchema = JsonSchemeGenerator.GetJsonSchema(); // 👈 Injected here
 
             while (queue.Count > 0 &&
                   (maxUrlsToProcess == 0 || processedUrls.Count < maxUrlsToProcess) &&
