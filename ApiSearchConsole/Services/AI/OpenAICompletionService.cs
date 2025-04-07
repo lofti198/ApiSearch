@@ -3,7 +3,8 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ApiSearchConsole.Services.AI{
+namespace ApiSearchConsole.Services.AI
+{
 
     public class OpenAICompletionService : IChatCompletionsService
     {
@@ -34,17 +35,35 @@ namespace ApiSearchConsole.Services.AI{
 
                 var payload = new
                 {
-                    model = "gpt-4",
+                    model = "gpt-4o",
                     messages,
-                    //TODO: if its null as parameter - do not include it in the request
-#if !DEBUG
                     response_format = new
                     {
                         type = "json_schema",
                         json_schema = jsonSchema
                     }
-#endif
                 };
+
+                //var payload = new Dictionary<string, object>
+                //{
+                //    model = "gpt-4",
+                //    messages = messages,
+                //    response_format = new
+                //    {
+                //        type = "json_schema",
+                //        json_schema = jsonSchema
+                //    }
+                //};
+
+                //if (jsonSchema != null)
+                //{
+                //    payload["response_format"] = new
+                //    {
+                //        type = "json_schema",
+                //        json_schema = jsonSchema
+                //    };
+                //}
+
 
                 request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
 

@@ -1,13 +1,10 @@
 ﻿using ApiSearchConsole.Services.AI;
 using ApiSearchConsole.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using HtmlAgilityPack;
-using System.Text.RegularExpressions;
 using Plamar.QueueProcFacilities.Services.Caching;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using ApiSearchConsole.Utils;
 
 namespace ApiSearchConsole
 {
@@ -26,9 +23,11 @@ namespace ApiSearchConsole
             int maxUrlsToProcess,
             int maxRelevantResults,
             string? instruction,
-            object jsonSchema,
+            object? _, // previous jsonSchema param not needed
             int openAiIntervalInMilliseconds)
         {
+            var jsonSchema = JsonSchemeGenerator.GetJsonScheme(); // 👈 Injected here
+
             while (queue.Count > 0 &&
                   (maxUrlsToProcess == 0 || processedUrls.Count < maxUrlsToProcess) &&
                   (maxRelevantResults == 0 || relevantResults.Count < maxRelevantResults))
@@ -62,28 +61,40 @@ namespace ApiSearchConsole
                 var htmlDoc = new HtmlDocument();
                 htmlDoc.LoadHtml(content);
                 var textContent = Regex.Replace(htmlDoc.DocumentNode.InnerText, @"\s+", " ").Trim();
-           
+
                 try
                 {
-                    //If you make too many requests, you may receive a 429 error )))))
                     Thread.Sleep(openAiIntervalInMilliseconds);
-                    
-                    var cachedResult = await llmCachingService.GetCache(instruction + textContent);
 
-                    var result = "";
-                    if(!String.IsNullOrEmpty(cachedResult))result = cachedResult;
+                    var cacheKey = instruction + textContent;
+                    var cachedResult = await llmCachingService.GetCache(cacheKey);
+
+                    string result;
+                    if (!string.IsNullOrEmpty(cachedResult))
+                    {
+                        result = cachedResult;
+                    }
                     else
                     {
                         result = await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
                         if (!string.IsNullOrWhiteSpace(result))
-                            llmCachingService.SaveCache(instruction + textContent, result);
+                            llmCachingService.SaveCache(cacheKey, result);
                     }
 
-                    await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
                     if (!string.IsNullOrWhiteSpace(result))
                     {
-                        logger.Log($"✅ Relevant content found at: {url}");
-                        relevantResults.Add($"URL: {url}\n{result}");
+                        var answers = JsonConvert.DeserializeObject<List<AnswerItem>>(result);
+
+                        if (answers != null && answers.Any())
+                        {
+                            logger.Log($"✅ Relevant content found at: {url}");
+                            foreach (var a in answers)
+                            {
+                                Console.WriteLine($"🟢 Answer found: {a.originalQuestion} → {a.answer}");
+                            }
+
+                            relevantResults.Add($"URL: {url}\n{result}");
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -106,6 +117,12 @@ namespace ApiSearchConsole
                     }
                 }
             }
+        }
+
+        public class AnswerItem
+        {
+            public string originalQuestion { get; set; } = "";
+            public string answer { get; set; } = "";
         }
     }
 }
