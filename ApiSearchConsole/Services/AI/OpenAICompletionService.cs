@@ -80,8 +80,8 @@ namespace ApiSearchConsole.Services.AI
                 // Extract JSON response from OpenAI's reply
                 var responseText = chatResponseJson?.choices[0].message.content.ToString().Trim();
 
-                responseText = Regex.Replace(responseText, "^.*?{", "{", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                responseText = Regex.Replace(responseText, "}.*?$", "}", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                //responseText = Regex.Replace(responseText, "^.*?{", "{", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                //responseText = Regex.Replace(responseText, "}.*?$", "}", RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 responseText = responseText.Trim();
 
                 return responseText;

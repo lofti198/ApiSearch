@@ -82,7 +82,8 @@ namespace ApiSearchConsole
 
                     if (!string.IsNullOrWhiteSpace(result))
                     {
-                        var answers = JsonConvert.DeserializeObject<List<AnswerItem>>(result);
+                        var response = JsonConvert.DeserializeObject<AnswerResponse>(result);
+                        var answers = response?.answers;
 
                         if (answers != null && answers.Any())
                         {
@@ -116,6 +117,10 @@ namespace ApiSearchConsole
                     }
                 }
             }
+        }
+        public class AnswerResponse
+        {
+            public List<AnswerItem> answers { get; set; } = new();
         }
 
         public class AnswerItem
