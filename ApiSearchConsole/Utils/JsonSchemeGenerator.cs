@@ -13,7 +13,7 @@
                     answers = new
                     {
                         type = "array",
-                        description = "List of question-answer pairs relevant to the prompt.",
+                        description = "List of question-answer pairs relevant to the prompt main questions.",
                         items = new
                         {
                             type = "object",

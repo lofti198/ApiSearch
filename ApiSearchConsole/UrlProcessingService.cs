@@ -22,6 +22,7 @@ namespace ApiSearchConsole
             int maxUrlsToProcess,
             int maxRelevantResults,
             string? instruction,
+            string? prompt,
             object? _, // previous jsonSchema param not needed
             int openAiIntervalInMilliseconds)
         {
@@ -65,7 +66,7 @@ namespace ApiSearchConsole
                 {
                     Thread.Sleep(openAiIntervalInMilliseconds);
 
-                    var cacheKey = instruction + textContent;
+                    var cacheKey = prompt + instruction + textContent;
                     var cachedResult = await llmCachingService.GetCache(cacheKey);
 
                     string result;
@@ -75,7 +76,7 @@ namespace ApiSearchConsole
                     }
                     else
                     {
-                        result = await openAiService.GetChatCompletionsAsync(textContent, instruction, jsonSchema);
+                        result = await openAiService.GetChatCompletionsAsync(prompt + "\n # Content from docs \n" + textContent, instruction, jsonSchema);
                         if (!string.IsNullOrWhiteSpace(result))
                             llmCachingService.SaveCache(cacheKey, result);
                     }

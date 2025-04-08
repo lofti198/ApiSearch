@@ -58,6 +58,7 @@ await urlProcessingService.ProcessUrlsAsync(queue,
     maxUrlsToProcess,
     maxRelevantResults,
     instruction,
+    prompt,
     jsonSchema,
     openAiIntervalInMilliseconds);
 
