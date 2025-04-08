@@ -27,6 +27,7 @@ namespace ApiSearchConsole
             int openAiIntervalInMilliseconds)
         {
             var jsonSchema = JsonSchemeGenerator.GetJsonSchema(); // 👈 Injected here
+            var allAnswers = new List<AnswerItem>(); // 👈 Collect all answers
 
             while (queue.Count > 0 &&
                   (maxUrlsToProcess == 0 || processedUrls.Count < maxUrlsToProcess) &&
@@ -76,7 +77,12 @@ namespace ApiSearchConsole
                     }
                     else
                     {
-                        result = await openAiService.GetChatCompletionsAsync(prompt + "\n # Content from docs \n" + textContent, instruction, jsonSchema);
+                        result = await openAiService.GetChatCompletionsAsync(
+                            $"{prompt}\n\n# Content from docs\n{textContent}",
+                            instruction,
+                            jsonSchema
+                        );
+
                         if (!string.IsNullOrWhiteSpace(result))
                             llmCachingService.SaveCache(cacheKey, result);
                     }
@@ -91,9 +97,11 @@ namespace ApiSearchConsole
                             logger.Log($"✅ Relevant content found at: {url}");
                             foreach (var a in answers)
                             {
-                                Console.WriteLine($"🟢 Answer found: {a.originalQuestion} → {a.answer}");
+                                a.sourceUrl = url; // 👈 Assign source URL
+                                Console.WriteLine($"🟢 {a.originalQuestion} → {a.answer}");
                             }
 
+                            allAnswers.AddRange(answers); // 👈 Collect
                             relevantResults.Add($"URL: {url}\n{result}");
                         }
                     }
@@ -118,7 +126,38 @@ namespace ApiSearchConsole
                     }
                 }
             }
+
+            // ✅ Save collected answers to file
+            if (allAnswers.Any())
+            {
+                var lines = allAnswers.Select(a =>
+                    $"🔗 {a.sourceUrl}\n❓ {a.originalQuestion}\n✅ {a.answer}");
+
+                var docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var filePath = Path.Combine(docPath, "api_search_result.txt");
+
+                File.WriteAllText(filePath, string.Join("\n\n---\n\n", lines));
+                logger.Log($"📝 All answers saved to: {filePath}");
+
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = filePath,
+                        UseShellExecute = true // Opens with default app
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.Log($"⚠️ Could not open result file: {ex.Message}");
+                }
+            }
+            else
+            {
+                logger.Log("ℹ️ No answers to save.");
+            }
         }
+
         public class AnswerResponse
         {
             public List<AnswerItem> answers { get; set; } = new();
@@ -128,6 +167,7 @@ namespace ApiSearchConsole
         {
             public string originalQuestion { get; set; } = "";
             public string answer { get; set; } = "";
+            public string sourceUrl { get; set; } = ""; // 👈 Added
         }
     }
 }
