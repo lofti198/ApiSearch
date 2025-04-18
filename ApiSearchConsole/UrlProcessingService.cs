@@ -10,7 +10,7 @@ namespace ApiSearchConsole
     public class UrlProcessingService(
         UrlScraperService scraperService,
         CacheService cacheService,
-        OpenAICompletionService openAiService,
+        IChatCompletionsService openAiService,
         LoggerService logger,
         ICachingService<string, string> llmCachingService)
     {
@@ -80,7 +80,8 @@ namespace ApiSearchConsole
                         result = await openAiService.GetChatCompletionsAsync(
                             $"{prompt}\n\n# Content from docs\n{textContent}",
                             instruction,
-                            jsonSchema
+                            jsonSchema,
+                            CancellationToken.None
                         );
 
                         if (!string.IsNullOrWhiteSpace(result))
@@ -128,8 +129,12 @@ namespace ApiSearchConsole
             }
 
             // ✅ Save collected answers to file
-            if (allAnswers.Any())
+            if (allAnswers.Count != 0)
             {
+
+                //filtering results by AI
+
+
                 var lines = allAnswers.Select(a =>
                     $"🔗 {a.sourceUrl}\n❓ {a.originalQuestion}\n✅ {a.answer}");
 
