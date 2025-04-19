@@ -1,6 +1,7 @@
 ﻿using ApiSearchConsole.Services;
 using ApiSearchConsole.Services.AI;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Plamar.QueueProcFacilities.Services.Caching;
 using System.Text.RegularExpressions;
@@ -12,7 +13,8 @@ namespace ApiSearchConsole
         CacheService cacheService,
         IChatCompletionsService openAiService,
         LoggerService logger,
-        ICachingService<string, string> llmCachingService)
+        ICachingService<string, string> llmCachingService,
+        IConfiguration _configuration) // 👈 Injected here
     {
         public async Task ProcessUrlsAsync(
             Queue<(string Url, int Depth)> queue,
@@ -131,11 +133,21 @@ namespace ApiSearchConsole
             // ✅ Save collected answers to file
             if (allAnswers.Count != 0)
             {
-
                 //filtering results by AI
+                var filteringPrompt = _configuration["filterPrompt"] ?? throw new ArgumentNullException(nameof(_configuration), "Cannot find parameter");
 
+                var answersJson = JsonConvert.SerializeObject(allAnswers);
+                var filteringResult = await openAiService.GetChatCompletionsAsync(
+                    $"{filteringPrompt}\n\n{answersJson}",
+                    filteringPrompt,
+                    jsonSchema, 
+                    CancellationToken.None
+                );
 
-                var lines = allAnswers.Select(a =>
+                var filteredResponse = JsonConvert.DeserializeObject<AnswerResponse>(filteringResult);
+                var filteredAnswers = filteredResponse?.answers ?? new List<AnswerItem>();
+
+                var lines = filteredAnswers.Select(a =>
                     $"🔗 {a.sourceUrl}\n❓ {a.originalQuestion}\n✅ {a.answer}");
 
                 var docPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
